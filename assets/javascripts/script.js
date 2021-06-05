@@ -35,6 +35,8 @@ let startMoving;
 let moves;
 let stepStartTimestamp;
 
+let gameOver = false; // A flag to check whether the game has been over or not
+
 const carFrontTexture = new Texture(40, 80, [{ x: 0, y: 10, w: 30, h: 60 }]);
 const carBackTexture = new Texture(40, 80, [{ x: 10, y: 10, w: 30, h: 60 }]);
 const carRightSideTexture = new Texture(110, 40, [{ x: 10, y: 0, w: 50, h: 30 }, { x: 70, y: 0, w: 30, h: 30 }]);
@@ -62,9 +64,35 @@ const addLane = () => {
 const chicken = new Chicken();
 scene.add(chicken);
 
+hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+scene.add(hemiLight)
+
+const initialDirLightPositionX = -100;
+const initialDirLightPositionY = -100;
+dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(initialDirLightPositionX, initialDirLightPositionY, 200);
+dirLight.castShadow = true;
+dirLight.target = chicken;
+scene.add(dirLight);
+
+dirLight.shadow.mapSize.width = 2048;
+dirLight.shadow.mapSize.height = 2048;
+
+var direction = 500;
+
+dirLight.shadow.camera.left = -direction;
+dirLight.shadow.camera.right = direction;
+dirLight.shadow.camera.top = direction;
+dirLight.shadow.camera.bottom = -direction;
+
+backLight = new THREE.DirectionalLight(0x000000, .4);
+backLight.position.set(200, 200, 50);
+backLight.castShadow = true;
+scene.add(backLight)
+
 const laneTypes = ['car', 'truck', 'forest'];
 const laneSpeeds = [2, 2.5, 3];
-const vechicleColors = [0xa52523, 0xbdb638, 0x78b14b];
+const vechicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
 const threeHeights = [20, 45, 60];
 
 const initaliseValues = () => {
@@ -75,6 +103,8 @@ const initaliseValues = () => {
 
     previousTimestamp = null;
 
+    gameOver = false;
+
     startMoving = false;
     moves = [];
     stepStartTimestamp;
@@ -84,6 +114,9 @@ const initaliseValues = () => {
 
     camera.position.y = initialCameraPositionY;
     camera.position.x = initialCameraPositionX;
+
+    dirLight.position.x = initialDirLightPositionX;
+    dirLight.position.y = initialDirLightPositionY;
 }
 
 initaliseValues();
@@ -97,27 +130,6 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
-scene.add(hemiLight)
-
-dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-dirLight.position.set(-100, -100, 200);
-dirLight.castShadow = true;
-scene.add(dirLight);
-
-dirLight.shadow.mapSize.width = 2048;
-dirLight.shadow.mapSize.height = 2048;
-var d = 500;
-dirLight.shadow.camera.left = -d;
-dirLight.shadow.camera.right = d;
-dirLight.shadow.camera.top = d;
-dirLight.shadow.camera.bottom = -d;
-
-backLight = new THREE.DirectionalLight(0x000000, .4);
-backLight.position.set(200, 200, 50);
-backLight.castShadow = true;
-scene.add(backLight)
-
 function Texture(width, height, rects) {
     const canvas = document.createElement("canvas");
     canvas.width = width;
@@ -129,9 +141,7 @@ function Texture(width, height, rects) {
     rects.forEach(rect => {
         context.fillRect(rect.x, rect.y, rect.w, rect.h);
     });
-
     return new THREE.CanvasTexture(canvas);
-
 }
 
 function Wheel() {
@@ -157,14 +167,9 @@ function Car() {
     car.add(main)
 
     const cabin = new THREE.Mesh(
-        new THREE.BoxBufferGeometry(33 * zoom, 24 * zoom, 12 * zoom), [
-            new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carBackTexture }),
-            new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carFrontTexture }),
-            new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carRightSideTexture }),
-            new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true, map: carLeftSideTexture }),
-            new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }), // top
-            new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }) // bottom
-        ]
+        new THREE.BoxBufferGeometry(33 * zoom, 24 * zoom, 12 * zoom),
+        new THREE.MeshPhongMaterial({ color: 0xcccccc, flatShading: true }) // bottom
+
     );
 
     cabin.position.x = 6 * zoom;
@@ -190,8 +195,6 @@ function Car() {
 function Truck() {
     const truck = new THREE.Group();
     const color = vechicleColors[Math.floor(Math.random() * vechicleColors.length)];
-
-
     const base = new THREE.Mesh(
         new THREE.BoxBufferGeometry(100 * zoom, 25 * zoom, 5 * zoom),
         new THREE.MeshLambertMaterial({ color: 0xb4c6fc, flatShading: true })
@@ -209,16 +212,13 @@ function Truck() {
     cargo.receiveShadow = true;
     truck.add(cargo)
 
-    const cabin = new THREE.Mesh(
-        new THREE.BoxBufferGeometry(25 * zoom, 30 * zoom, 30 * zoom), [
-            new THREE.MeshPhongMaterial({ color, flatShading: true }), // back
-            new THREE.MeshPhongMaterial({ color, flatShading: true, map: truckFrontTexture }),
-            new THREE.MeshPhongMaterial({ color, flatShading: true, map: truckRightSideTexture }),
-            new THREE.MeshPhongMaterial({ color, flatShading: true, map: truckLeftSideTexture }),
-            new THREE.MeshPhongMaterial({ color, flatShading: true }), // top
-            new THREE.MeshPhongMaterial({ color, flatShading: true }) // bottom
-        ]
+    var cabin = new THREE.Mesh(
+
+        new THREE.BoxBufferGeometry(25 * zoom, 30 * zoom, 30 * zoom),
+        new THREE.MeshPhongMaterial({ color, flatShading: true })
+
     );
+
     cabin.position.x = -40 * zoom;
     cabin.position.z = 20 * zoom;
     cabin.castShadow = true;
@@ -321,15 +321,15 @@ function Grass() {
         new THREE.MeshPhongMaterial({ color })
     );
 
-    const middle = createSection(0xbaf455);
+    const middle = createSection(0x55f472);
     middle.receiveShadow = true;
     grass.add(middle);
 
-    const left = createSection(0x99C846);
+    const left = createSection(0x46c871);
     left.position.x = -boardWidth * zoom;
     grass.add(left);
 
-    const right = createSection(0x99C846);
+    const right = createSection(0x46c871);
     right.position.x = boardWidth * zoom;
     grass.add(right);
 
@@ -416,6 +416,7 @@ function Lane(index) {
 document.querySelector("#retry").addEventListener("click", () => {
     lanes.forEach(lane => scene.remove(lane.mesh));
     initaliseValues();
+    counterDOM.innerHTML = currentLane;
     endDOM.style.visibility = 'hidden';
 });
 
@@ -428,17 +429,17 @@ document.getElementById('left').addEventListener("click", () => move('left'));
 document.getElementById('right').addEventListener("click", () => move('right'));
 
 window.addEventListener("keydown", event => {
-    if (event.keyCode == '38') {
-        // up arrow
+    if (gameOver) {
+        return;
+    }
+
+    if ((event.key == 'ArrowUp')) {
         move('forward');
-    } else if (event.keyCode == '40') {
-        // down arrow
+    } else if ((event.key == 'ArrowDown')) {
         move('backward');
-    } else if (event.keyCode == '37') {
-        // left arrow
+    } else if ((event.key == 'ArrowLeft')) {
         move('left');
-    } else if (event.keyCode == '39') {
-        // right arrow
+    } else if ((event.key == 'ArrowRight')) {
         move('right');
     }
 });
@@ -470,6 +471,7 @@ function move(direction) {
     }
 
     moves.push(direction);
+
 }
 
 function animate(timestamp) {
@@ -483,6 +485,11 @@ function animate(timestamp) {
     // Animate cars and trucks moving on the lane
     lanes.forEach(lane => {
         if (lane.type === 'car' || lane.type === 'truck') {
+
+            if (gameOver) {
+                return;
+            }
+
             const aBitBeforeTheBeginingOfLane = -boardWidth * zoom / 2 - positionWidth * 2 * zoom;
             const aBitAfterTheEndOFLane = boardWidth * zoom / 2 + positionWidth * 2 * zoom;
             lane.vechicles.forEach(vechicle => {
@@ -507,34 +514,44 @@ function animate(timestamp) {
         switch (moves[0]) {
             case 'forward':
                 {
-                    camera.position.y = initialCameraPositionY + currentLane * positionWidth * zoom + moveDeltaDistance;
-                    chicken.position.y = currentLane * positionWidth * zoom + moveDeltaDistance; // initial chicken position is 0
+                    const positionY = currentLane * positionWidth * zoom + moveDeltaDistance;
+                    camera.position.y = initialCameraPositionY + positionY;
+                    dirLight.position.y = initialDirLightPositionY + positionY;
+                    chicken.position.y = positionY; // initial chicken position is 0
+
                     chicken.position.z = jumpDeltaDistance;
                     break;
                 }
             case 'backward':
                 {
-                    camera.position.y = initialCameraPositionY + currentLane * positionWidth * zoom - moveDeltaDistance;
-                    chicken.position.y = currentLane * positionWidth * zoom - moveDeltaDistance;
+                    positionY = currentLane * positionWidth * zoom - moveDeltaDistance
+                    camera.position.y = initialCameraPositionY + positionY;
+                    dirLight.position.y = initialDirLightPositionY + positionY;
+                    chicken.position.y = positionY;
+
                     chicken.position.z = jumpDeltaDistance;
                     break;
                 }
             case 'left':
                 {
-                    camera.position.x = initialCameraPositionX + (currentColumn * positionWidth + positionWidth / 2) * zoom - boardWidth * zoom / 2 - moveDeltaDistance;
-                    chicken.position.x = (currentColumn * positionWidth + positionWidth / 2) * zoom - boardWidth * zoom / 2 - moveDeltaDistance; // initial chicken position is 0
+                    const positionX = (currentColumn * positionWidth + positionWidth / 2) * zoom - boardWidth * zoom / 2 - moveDeltaDistance;
+                    camera.position.x = initialCameraPositionX + positionX;
+                    dirLight.position.x = initialDirLightPositionX + positionX;
+                    chicken.position.x = positionX; // initial chicken position is 0
                     chicken.position.z = jumpDeltaDistance;
                     break;
                 }
             case 'right':
                 {
-                    camera.position.x = initialCameraPositionX + (currentColumn * positionWidth + positionWidth / 2) * zoom - boardWidth * zoom / 2 + moveDeltaDistance;
-                    chicken.position.x = (currentColumn * positionWidth + positionWidth / 2) * zoom - boardWidth * zoom / 2 + moveDeltaDistance;
+                    const positionX = (currentColumn * positionWidth + positionWidth / 2) * zoom - boardWidth * zoom / 2 + moveDeltaDistance;
+                    camera.position.x = initialCameraPositionX + positionX;
+                    dirLight.position.x = initialDirLightPositionX + positionX;
+                    chicken.position.x = positionX;
+
                     chicken.position.z = jumpDeltaDistance;
                     break;
                 }
         }
-
         // Once a step has ended
         if (moveDeltaTime > stepTime) {
             switch (moves[0]) {
@@ -561,12 +578,9 @@ function animate(timestamp) {
                         break;
                     }
             }
-
             moves.shift();
-
             // If more steps are to be taken then restart counter otherwise stop stepping
             stepStartTimestamp = moves.length === 0 ? null : timestamp;
-
         }
     }
 
@@ -579,11 +593,14 @@ function animate(timestamp) {
             const carMinX = vechicle.position.x - vechicleLength * zoom / 2;
             const carMaxX = vechicle.position.x + vechicleLength * zoom / 2;
             if (chickenMaxX > carMinX && chickenMinX < carMaxX) {
+
+                gameOver = true;
                 endDOM.style.visibility = 'visible';
             }
         });
 
     }
+
     renderer.render(scene, camera);
 }
 
