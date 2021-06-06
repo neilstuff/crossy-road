@@ -442,6 +442,7 @@ window.addEventListener("keydown", event => {
     } else if ((event.key == 'ArrowRight')) {
         move('right');
     }
+
 });
 
 function move(direction) {
