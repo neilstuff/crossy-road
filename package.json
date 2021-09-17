@@ -33,7 +33,6 @@
     "author": "GitHub",
     "license": "CC0-1.0",
     "dependencies": {
-        "electron-disable-file-drop": "^1.0.2",
         "three.js": "^0.77.1"
     },
     "devDependencies": {
