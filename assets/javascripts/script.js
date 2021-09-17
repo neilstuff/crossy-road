@@ -96,6 +96,10 @@ const vechicleColors = [0x428eff, 0xffef42, 0xff7b42, 0xff426b];
 const threeHeights = [20, 45, 60];
 
 const initaliseValues = () => {
+         
+    document.addEventListener('dragover', event => event.preventDefault());
+    document.addEventListener('drop', event => event.preventDefault());
+
     lanes = generateLanes()
 
     currentLane = 0;

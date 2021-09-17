@@ -9,7 +9,6 @@ const path = require('path')
 const url = require('url')
 
 var mainWindow = null;
-app.allowRendererProcessReuse = true;
 
 function createWindow() {
 
