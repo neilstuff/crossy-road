@@ -3,8 +3,7 @@
 const config = require('./config.json');
 
 const electron = require('electron');
-const { app, protocol } = require('electron');
-const BrowserWindow = electron.BrowserWindow;
+const { app, protocol, BrowserWindow } = require('electron');
 
 const path = require('path')
 const url = require('url')
