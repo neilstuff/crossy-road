@@ -3,8 +3,7 @@
 const config = require('./config.json');
 
 const electron = require('electron');
-const { app, protocol } = require('electron');
-const BrowserWindow = electron.BrowserWindow;
+const { app, protocol, BrowserWindow } = require('electron');
 
 const path = require('path')
 const url = require('url')
@@ -26,11 +25,7 @@ function createWindow() {
     }
 
     mainWindow.setMenu(null);
-    mainWindow.loadURL(url.format({
-        pathname: path.join(__dirname, 'index.html'),
-        protocol: 'file:',
-        slashes: true
-    }))
+    mainWindow.loadURL(`file:///${path.join(__dirname, 'index.html')}`);
 
     mainWindow.on('closed', () => {
         mainWindow = null
